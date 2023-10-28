@@ -4,9 +4,9 @@
 
 This entire workflow has been developed using **AWS Step Functions** with appropriate permissions and roles
 
-Workflow has been divided into 2 parts
-1.) ETL WorkFlow
-2.) Streaming WorkFlow
+Workflow has been divided into 2 parts <br/>
+1.) ETL WorkFlow <br/>
+2.) Streaming WorkFlow <br/>
 
 Workflow will be identified based on intrinsic step functions (States.MathRandom(StartValue, EndValue))
 
@@ -18,9 +18,9 @@ Workflow will be identified based on intrinsic step functions (States.MathRandom
 
 **States.Format, States.MathRandom, States.StringToJson, States.JsonToString etc** 
 
-Used InputPath, Parameters for Input Filteration and Transformation of Input from one form to another form
+Used InputPath, Parameters for Input Filteration and Transformation of Input from one form to another form <br/>
 
-Used ResultPath, and OutputSelector to filter capture both input and output for the next state.
+Used ResultPath, and OutputSelector to filter capture both input and output for the next state. <br/>
 
 **Streaming WorkFlow**
 
