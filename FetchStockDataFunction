@@ -1,0 +1,23 @@
+import json
+import requests
+
+## Rapid API stock analysis api related info and data is collected for every min for first 100 minutes
+
+url = "https://alpha-vantage.p.rapidapi.com/query"
+querystring = {"interval":"1min","function":"TIME_SERIES_INTRADAY","symbol":"MSFT","datatype":"json","output_size":"compact"}
+headers = {
+    "X-RapidAPI-Key": "bd675a2e56msh75474a42f520a18p180a34jsn3f06bc445ce3",
+    "X-RapidAPI-Host": "alpha-vantage.p.rapidapi.com"
+}
+
+def lambda_handler(event, context):
+    # TODO implement
+    
+    response = requests.get(url, headers=headers, params=querystring)
+    response_json = response.json()
+    
+    time_series_data = response_json["Time Series (1min)"]
+    
+    time_series_data_json = json.dumps(time_series_data)
+    
+    return time_series_data_json

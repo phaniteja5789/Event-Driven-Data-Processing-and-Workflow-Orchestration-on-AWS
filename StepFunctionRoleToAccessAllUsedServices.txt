@@ -1,0 +1,142 @@
+StepFunction Policy To Access Lambda Invoke Function
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "arn:aws:lambda:us-east-1:154142252146:function:FetchSubscriptionDataFunction:*"
+            ]
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "arn:aws:lambda:us-east-1:154142252146:function:FetchSubscriptionDataFunction"
+            ]
+        }
+    ]
+}
+
+Step Function Policy to Publish to the SNS Topic
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "sns:Publish"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+
+Step Function Policy to Access Glue Job Run
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Action": [
+                "glue:StartJobRun"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+
+
+Step Function Policy to Access Kinesis Service and Other Lambda Functions
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Action": [
+                "kinesis:ListStreams",
+                "kinesis:PutRecord",
+                "kinesis:CreateStream",
+                "lambda:InvokeFunction"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+
+Step Function Policy to Access S3 Service
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Action": [
+                "s3:ListBucket",
+                "s3:ListAllMyBuckets",
+                "s3:CreateBucket",
+                "s3:PutObject"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+
+
+Step Function Policy to Access other SNS SDK's
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Action": [
+                "sns:Subscribe",
+                "sns:CreateTopic",
+                "sns:ListTopics"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}
+
+
+Step Function Policy to Access XRay Service
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "xray:PutTraceSegments",
+                "xray:PutTelemetryRecords",
+                "xray:GetSamplingRules",
+                "xray:GetSamplingTargets"
+            ],
+            "Resource": [
+                "*"
+            ]
+        }
+    ]
+}

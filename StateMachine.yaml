@@ -1,0 +1,244 @@
+Comment: A description of my state machine
+StartAt: ChooseBatchOrStream
+States:
+  ChooseBatchOrStream:
+    Type: Pass
+    Parameters:
+      batchOrStreamValue.$: States.MathRandom($.start,$.end)
+    Next: CheckBatchOrStream
+    ResultPath: $.batchOrStreamValue
+  CheckBatchOrStream:
+    Type: Choice
+    Choices:
+      - Variable: $.batchOrStreamValue.batchOrStreamValue
+        NumericEquals: 1
+        Next: BatchJobExecutionStarts
+    Default: StreamJobExecutionStarts
+  BatchJobExecutionStarts:
+    Type: Pass
+    Next: FetchStockMarketData
+  FetchStockMarketData:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Parameters:
+      Payload.$: $
+      FunctionName: >-
+        arn:aws:lambda:us-east-1:154142252146:function:FetchStockMarketDataFunction:$LATEST
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    Next: StockMarketDataFromJsonToString
+    ResultPath: $.taskResult
+  StockMarketDataFromJsonToString:
+    Type: Pass
+    Parameters:
+      taskResult.$: States.StringToJson($.taskResult.Payload)
+    Next: ListBuckets
+    ResultPath: $.taskResult
+  ListBuckets:
+    Type: Task
+    Parameters: {}
+    Resource: arn:aws:states:::aws-sdk:s3:listBuckets
+    Next: CheckBucketExistsOrNot
+    ResultPath: $.Buckets
+  CheckBucketExistsOrNot:
+    Type: Pass
+    Parameters:
+      ValidateBucket.$: States.ArrayContains($.Buckets.Buckets,$.batchBucketName)
+    ResultPath: $.ValidateBucket
+    Next: ValidateBucketExistsOrNot
+  ValidateBucketExistsOrNot:
+    Type: Choice
+    Choices:
+      - Variable: $.ValidateBucket.ValidateBucket
+        BooleanEquals: false
+        Next: BucketNotExists
+    Default: BucketAlreadyExists
+  BucketNotExists:
+    Type: Pass
+    Next: WaitFor1Min
+  WaitFor1Min:
+    Type: Wait
+    Seconds: 60
+    Next: CreateBucket
+  CreateBucket:
+    Type: Task
+    Parameters:
+      Bucket.$: $.batchBucketName
+    Resource: arn:aws:states:::aws-sdk:s3:createBucket
+    Next: BucketCreatedInsertDataIntoBucket
+    ResultPath: null
+  BucketCreatedInsertDataIntoBucket:
+    Type: Pass
+    Next: WaitForSomeTimeToLoadDataIntoS3
+  WaitForSomeTimeToLoadDataIntoS3:
+    Type: Wait
+    Seconds: 60
+    Next: PutObject
+  PutObject:
+    Type: Task
+    Parameters:
+      Body.$: $.taskResult.taskResult
+      Bucket.$: $.batchBucketName
+      Key: StockData
+    Resource: arn:aws:states:::aws-sdk:s3:putObject
+    Next: WaitForSomeTimeToStartGlueJob
+    ResultPath: null
+  WaitForSomeTimeToStartGlueJob:
+    Type: Wait
+    Seconds: 60
+    Next: Glue StartJobRun
+  Glue StartJobRun:
+    Type: Task
+    Resource: arn:aws:states:::glue:startJobRun
+    Parameters:
+      JobName.$: $.glueJobName
+    Next: ETLJobSuccess
+  ETLJobSuccess:
+    Type: Succeed
+  BucketAlreadyExists:
+    Type: Pass
+    Next: PutObject
+  StreamJobExecutionStarts:
+    Type: Pass
+    Next: FetchSubscriptionData
+  FetchSubscriptionData:
+    Type: Task
+    Resource: arn:aws:states:::lambda:invoke
+    Parameters:
+      Payload.$: $
+      FunctionName: >-
+        arn:aws:lambda:us-east-1:154142252146:function:FetchSubscriptionDataFunction:$LATEST
+    Retry:
+      - ErrorEquals:
+          - Lambda.ServiceException
+          - Lambda.AWSLambdaException
+          - Lambda.SdkClientException
+          - Lambda.TooManyRequestsException
+        IntervalSeconds: 1
+        MaxAttempts: 3
+        BackoffRate: 2
+    ResultPath: $.taskResult
+    Next: StringToJsonTransformation
+  StringToJsonTransformation:
+    Type: Pass
+    Parameters:
+      PayloadData.$: States.StringToJson($.taskResult.Payload)
+    ResultPath: $.PayloadJsonData
+    Next: ListStreams
+  ListStreams:
+    Type: Task
+    Parameters: {}
+    Resource: arn:aws:states:::aws-sdk:kinesis:listStreams
+    ResultPath: $.taskResult
+    Next: CheckStreamIsPresentOrNot
+  CheckStreamIsPresentOrNot:
+    Type: Pass
+    Parameters:
+      ContainsStreamOrNot.$: States.ArrayContains($.taskResult.StreamNames,$.streamName)
+    ResultPath: $.ContainsStreamOrNot
+    Next: BasedOnPresenceOfStream
+  BasedOnPresenceOfStream:
+    Type: Choice
+    Choices:
+      - Variable: $.ContainsStreamOrNot.ContainsStreamOrNot
+        BooleanEquals: true
+        Next: StreamIsAlreadyPresent
+    Default: StreamIsNotPresentOrCreating
+  StreamIsAlreadyPresent:
+    Type: Pass
+    Next: StreamExists
+  StreamIsNotPresentOrCreating:
+    Type: Pass
+    Next: StreamCreation
+  StreamCreation:
+    Type: Task
+    Parameters:
+      StreamName.$: $.streamName
+    Resource: arn:aws:states:::aws-sdk:kinesis:createStream
+    ResultPath: null
+    Next: WaitForSomeTime
+  WaitForSomeTime:
+    Type: Wait
+    Seconds: 60
+    Next: StreamExists
+  StreamExists:
+    Type: Pass
+    Next: InsertRecordInStream
+  InsertRecordInStream:
+    Type: Task
+    Parameters:
+      StreamName.$: $.streamName
+      Data.$: $.PayloadJsonData.PayloadData.services
+      PartitionKey.$: $.PayloadJsonData.PayloadData.countryCode
+    Resource: arn:aws:states:::aws-sdk:kinesis:putRecord
+    ResultPath: $.taskResult
+    Next: DataEnteredIntoStream
+  DataEnteredIntoStream:
+    Type: Pass
+    Next: ListTopics
+  ListTopics:
+    Type: Task
+    Parameters: {}
+    Resource: arn:aws:states:::aws-sdk:sns:listTopics
+    ResultPath: $.TopicsList
+    Next: CheckTopicIsPresentOrNot
+  CheckTopicIsPresentOrNot:
+    Type: Pass
+    Parameters:
+      IsTopicExists.$: States.ArrayContains($.TopicsList.Topics,$.topicName)
+    Next: CheckIfTopicExistsOrNot
+    ResultPath: $.IsTopicExists
+  CheckIfTopicExistsOrNot:
+    Type: Choice
+    Choices:
+      - Variable: $.IsTopicExists.IsTopicExists
+        BooleanEquals: true
+        Next: TopicAlreadyExists
+    Default: CreateTopicAndSubscription
+  TopicAlreadyExists:
+    Type: Pass
+    Next: PublishDataToTopic
+  CreateTopicAndSubscription:
+    Type: Pass
+    Next: CreateTopic
+  CreateTopic:
+    Type: Task
+    Parameters:
+      Name.$: $.topicName
+    Resource: arn:aws:states:::aws-sdk:sns:createTopic
+    ResultPath: $.topicArn
+    Next: Subscribe
+  Subscribe:
+    Type: Task
+    Parameters:
+      Protocol: email
+      TopicArn.$: $.topicArn.TopicArn
+      Endpoint: krishphaniteja9@gmail.com
+    Resource: arn:aws:states:::aws-sdk:sns:subscribe
+    Next: Wait
+    ResultPath: null
+  Wait:
+    Type: Wait
+    Seconds: 120
+    Next: PublishDataToTopic
+  PublishDataToTopic:
+    Type: Task
+    Resource: arn:aws:states:::sns:publish
+    Parameters:
+      TopicArn.$: $.topicArn.TopicArn
+      Message:
+        KinesisShardDetails: Data is present at
+        SequenceNumber.$: $.taskResult.SequenceNumber
+        ShardId.$: $.taskResult.ShardId
+        topicName.$: $.topicName
+        email.$: $.email
+    Next: Success
+  Success:
+    Type: Succeed

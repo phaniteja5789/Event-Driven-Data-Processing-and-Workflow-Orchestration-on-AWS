@@ -1,0 +1,9 @@
+{
+  "start" : 1,
+  "end" : 3,
+  "streamName" : "subscriptionStream",
+  "topicName" : "serviceSubscriptionptrTopic",
+  "email" : "krishphaniteja9@gmail.com",
+  "batchBucketName" : "stockdatabucket2810202312",
+  "glueJobName" : "StockDataETLJOB"
+}

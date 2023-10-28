@@ -1,0 +1,22 @@
+import json
+import requests
+
+def lambda_handler(event, context):
+    # TODO implement
+    
+    url = "https://streaming-availability.p.rapidapi.com/countries"
+    headers = {
+    	"X-RapidAPI-Key": "bd675a2e56msh75474a42f520a18p180a34jsn3f06bc445ce3",
+    	"X-RapidAPI-Host": "streaming-availability.p.rapidapi.com"
+    }
+    
+    response = requests.get(url, headers=headers)
+    
+    countrycode_details = {}
+    
+    response_dict = json.loads((response.content).decode("utf-8"))
+    
+    
+    return json.dumps(response_dict['result']["ae"])
+    
+    
